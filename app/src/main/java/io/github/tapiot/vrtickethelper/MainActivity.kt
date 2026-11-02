@@ -6,7 +6,7 @@ import androidx.activity.compose.BackHandler
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.viewModels
-import androidx.compose.foundation.background
+import androidx.compose.material3.Surface
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.safeDrawingPadding
@@ -85,7 +85,8 @@ fun AppRoot(vm: AppViewModel) {
 
     BackHandler(enabled = state.stack.size > 1 && state.screen != Screen.Booking) { vm.back() }
 
-    Box(Modifier.fillMaxSize().background(AppColors.Background).safeDrawingPadding()) {
+    Surface(Modifier.fillMaxSize(), color = AppColors.Background, contentColor = AppColors.Text) {
+    Box(Modifier.fillMaxSize().safeDrawingPadding()) {
         val screen = state.screen
         if (screen != Screen.SiteCheck) {
             WebViewHost(vm.session.webView, Modifier.size(1.dp).alpha(0f))
@@ -102,5 +103,6 @@ fun AppRoot(vm: AppViewModel) {
             Screen.Health -> HealthScreen(state.health, vm::back, vm::runHealth)
         }
         SnackbarHost(snackbar, Modifier.align(Alignment.BottomCenter))
+    }
     }
 }

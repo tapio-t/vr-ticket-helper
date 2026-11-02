@@ -14,6 +14,7 @@ import android.webkit.WebView
 import android.webkit.WebViewClient
 
 interface SiteListener {
+    fun onPageStarted(url: String) {}
     fun onUrlChanged(url: String) {}
     fun onPageFinished(url: String) {}
     fun onPaymentStarted() {}
@@ -65,6 +66,7 @@ class SiteClient(
             return
         }
         currentHost = NavigationPolicy.hostOf(url)
+        listener.onPageStarted(url)
         listener.onUrlChanged(url)
     }
 

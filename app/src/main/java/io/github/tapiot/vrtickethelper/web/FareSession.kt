@@ -42,11 +42,15 @@ class FareSession(appContext: Context) {
         get() = view ?: WebView(wrapper).also { wv ->
             WebViews.harden(wv)
             wv.webViewClient = SiteClient(NavigationPolicy(allowPayment = false), object : SiteListener {
-                override fun onUrlChanged(url: String) {
-                    _currentUrl.value = url
+                override fun onPageStarted(url: String) {
+                    DebugLog.d("fare page started")
                     finishedUrl.value = null
                 }
+                override fun onUrlChanged(url: String) {
+                    _currentUrl.value = url
+                }
                 override fun onPageFinished(url: String) {
+                    DebugLog.d("fare page finished")
                     finishedUrl.value = url
                 }
                 override fun onRendererGone() {
@@ -99,10 +103,21 @@ class FareSession(appContext: Context) {
 
     /** One request; null when the page was not usable and a retry on a fresh page makes sense. */
     private suspend fun attempt(path: String): FetchResult? {
-        if (!ensurePage()) return FetchResult.Failed("vr.fi did not load")
+        if (!ensurePage()) {
+            DebugLog.d("fare page not ready")
+            return FetchResult.Failed("vr.fi did not load")
+        }
         val slot = UUID.randomUUID().toString().replace("-", "").take(20)
-        if (webView.evalString(VrSite.fetchStartScript(slot, path)) != "started") return null
-        val raw = poll(slot) ?: return null
+        val started = webView.evalString(VrSite.fetchStartScript(slot, path))
+        if (started != "started") {
+            DebugLog.d("fetch not started: $started")
+            return null
+        }
+        val raw = poll(slot)
+        if (raw == null) {
+            DebugLog.d("fetch gave no reply")
+            return null
+        }
         val reply = VrSite.parseFetchReply(raw) ?: return FetchResult.Failed("Network error")
         DebugLog.d("fetch status ${reply.status}")
         return when {

@@ -75,6 +75,8 @@ class BookingController(
     private var outVerified = false
     private var retVerified = false
     private var summaryChecked = false
+    private var cookiesAnswered = false
+    private var lastState: PageState? = null
     private var cardsSeenAt = 0L
 
     val webView: WebView by lazy {
@@ -215,6 +217,16 @@ class BookingController(
     private suspend fun tick() {
         if (policy.paymentStarted) { stopHelping(auto = true); return }
         val s = readState() ?: return
+        if (s != lastState) DebugLog.d("booking page $s")
+        lastState = s
+        if (!cookiesAnswered && webView.evalString(VrSite.NECESSARY_COOKIES_SCRIPT) == "clicked") {
+            DebugLog.d("cookies: necessary only")
+            cookiesAnswered = true
+            // A seat-map click made while the question was open may not have taken effect.
+            if (!outMapSeen) outSeatClicked = false
+            if (!retMapSeen) retSeatClicked = false
+            return
+        }
         if (s.kind != currentKind) cardsSeenAt = 0L
         currentKind = s.kind
         when (s.kind) {
@@ -248,7 +260,9 @@ class BookingController(
         val script = VrSite.clickTrainScript(
             TimeMath.clock(c.journey.departure), TimeMath.clock(c.journey.arrival), c.journey.firstTrainNumber, c.duplicateIndex,
         )
-        return when (webView.evalString(script)) {
+        val result = webView.evalString(script)
+        DebugLog.d("select train: $result")
+        return when (result) {
             "clicked" -> {
                 _ui.update { it.copy(message = "Selected the $which train ${describe(c)}. Opening the ticket…") }
                 true
@@ -269,6 +283,7 @@ class BookingController(
         val verified = if (isReturn) retVerified else outVerified
         if (!verified) {
             val problems = checkPage { PageCheck.ticketProblems(it, c) }
+            DebugLog.d("ticket check: $problems")
             if (isReturn) retVerified = true else outVerified = true
             _ui.update {
                 it.copy(
@@ -299,7 +314,9 @@ class BookingController(
                 )
             }
             !seatClicked && s.changeSeat -> {
-                when (webView.evalString(VrSite.CLICK_CHANGE_SEAT_SCRIPT)) {
+                val r = webView.evalString(VrSite.CLICK_CHANGE_SEAT_SCRIPT)
+                DebugLog.d("change seat: $r")
+                when (r) {
                     "clicked", "open" -> if (isReturn) retSeatClicked = true else outSeatClicked = true
                 }
                 _ui.update { it.copy(message = "Opening the coach map…") }

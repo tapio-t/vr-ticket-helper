@@ -68,6 +68,8 @@ fun SecureWindow() {
     }
 }
 
+private const val YOUR_TURN_PREFIX = "Your turn: "
+
 private fun trustedHost(host: String?) = host == VrSite.HOST || NavigationPolicy.isPaymentHost(host)
 
 @Composable
@@ -169,18 +171,23 @@ private fun YourTurnCard(
     onDismissNotice: () -> Unit,
 ) {
     Column(Modifier.fillMaxWidth().background(AppColors.BlueContainer).padding(horizontal = 14.dp, vertical = 10.dp)) {
+        val yourTurn = message.startsWith(YOUR_TURN_PREFIX)
         Row(verticalAlignment = Alignment.CenterVertically) {
-            if (helping && !message.startsWith("Your turn")) {
+            if (helping && !yourTurn) {
                 CircularProgressIndicator(Modifier.size(14.dp), strokeWidth = 2.dp, color = AppColors.BlueText)
                 Text("  ", fontSize = 4.sp)
             }
             Text(
-                if (payment) "PAYMENT" else if (helping) "HELPING" else "YOUR TURN",
+                when {
+                    payment -> "PAYMENT"
+                    helping && !yourTurn -> "HELPING"
+                    else -> "YOUR TURN"
+                },
                 style = MaterialTheme.typography.titleSmall,
                 color = AppColors.BlueText,
             )
         }
-        Text(message, style = MaterialTheme.typography.bodyMedium, color = AppColors.Text)
+        Text(message.removePrefix(YOUR_TURN_PREFIX), style = MaterialTheme.typography.bodyMedium, color = AppColors.Text)
         if (warnings.isNotEmpty()) {
             Column(Modifier.padding(top = 6.dp).fillMaxWidth().background(AppColors.WarningBg).padding(8.dp)) {
                 Text("CHECK BEFORE PAYING", style = MaterialTheme.typography.titleSmall, color = AppColors.Warning)

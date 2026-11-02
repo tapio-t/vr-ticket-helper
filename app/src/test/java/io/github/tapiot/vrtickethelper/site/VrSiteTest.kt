@@ -38,9 +38,10 @@ class VrSiteTest {
         assertTrue(VrSite.parseSearch("""{"x":1}""") is VrSite.ParsedSearch.Error)
     }
 
-    @Test fun emptyOptionsAreAnEmptyList() {
-        val r = VrSite.parseSearch("""[{"result":{"data":{"status":"OK","options":[]}}}]""")
-        assertEquals(VrSite.ParsedSearch.Options(emptyList()), r)
+    @Test fun emptyOptionsMeanNotOnSale() {
+        // Real answer for 1.6.2028, outside the sales window.
+        val r = VrSite.parseSearch("""[{"result":{"data":{"status":"success","options":[]}}}]""")
+        assertEquals(VrSite.ParsedSearch.NotOnSale, r)
     }
 
     @Test fun parsesStationsAndSkipsBadOnes() {
@@ -134,6 +135,7 @@ class VrSiteTest {
     @Test fun everyScriptChecksTheOrigin() {
         listOf(
             VrSite.PAGE_STATE_SCRIPT, VrSite.CLICK_CHANGE_SEAT_SCRIPT, VrSite.PAGE_TEXT_SCRIPT, VrSite.READ_CARDS_SCRIPT,
+            VrSite.NECESSARY_COOKIES_SCRIPT,
             VrSite.fetchStartScript("abcdefgh12", "/api/x"), VrSite.fetchPollScript("abcdefgh12"),
         ).forEach { s ->
             val firstStatement = s.lines().map { it.trim() }.first { it.isNotEmpty() && it != "(function () {" }

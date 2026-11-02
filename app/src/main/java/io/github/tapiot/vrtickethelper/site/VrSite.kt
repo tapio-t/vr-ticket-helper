@@ -40,7 +40,7 @@ object VrSite {
 
     val STATION_CODE = Regex("^[A-ZÅÄÖ]{1,6}$")
     private val STATION_NAME = Regex("^[\\p{L}\\p{M}0-9 .,'()/\\-]{1,60}$")
-    private val TRAIN_NUMBER = Regex("^[0-9]{1,5}$")
+    private val TRAIN_NUMBER = Regex("^[0-9]{1,6}[A-Z]?$")
     private val TRAIN_TYPE = Regex("^[A-Za-z0-9]{1,8}$")
     private val OPTION_ID = Regex("^[A-Za-z0-9_:.=+/\\-]{1,200}$")
     private val CLOCK = Regex("^([0-9]{1,2}):([0-9]{2})$")
@@ -183,12 +183,13 @@ object VrSite {
     private const val CONFIRM_SEAT_TEXT = "Confirm seat selection"
     private const val SELECT_SEAT_TEXT = "Select a seat"
     private const val NIGHT_TRAFFIC_TEXT = "Night traffic"
+    private const val NECESSARY_COOKIES_TEXT = "Continue with only necessary cookies"
 
     private val COACH_MAP_JS = """
   var coachMap = Array.prototype.some.call(document.querySelectorAll("button"), function (b) {
-    return b.offsetParent !== null && (b.textContent || "").indexOf(${js(CONFIRM_SEAT_TEXT)}) >= 0;
+    return b.getClientRects().length > 0 && (b.textContent || "").indexOf(${js(CONFIRM_SEAT_TEXT)}) >= 0;
   }) || Array.prototype.some.call(document.querySelectorAll("h1,h2,h3,[role=heading]"), function (h) {
-    return h.offsetParent !== null && (h.textContent || "").indexOf(${js(SELECT_SEAT_TEXT)}) >= 0;
+    return h.getClientRects().length > 0 && (h.textContent || "").indexOf(${js(SELECT_SEAT_TEXT)}) >= 0;
   });
 """.trimIndent()
 
@@ -217,6 +218,7 @@ object VrSite {
     /** Clicks the nth matching train card. */
     fun clickTrainScript(departure: String, arrival: String, trainNumber: String, nth: Int): String {
         require(CLOCK.matches(departure) && CLOCK.matches(arrival) && TRAIN_NUMBER.matches(trainNumber) && nth in 0..20)
+        val digits = trainNumber.takeWhile { it.isDigit() }
         return """
 (function () {
   $GUARD
@@ -227,7 +229,7 @@ object VrSite {
     var nums = (c.getAttribute("data-train-numbers") || "").match(/[0-9]+/g) || [];
     return clock(c.querySelector('[data-testid="connection-list-item__time_departure"]')) === ${js(departure)}
       && clock(c.querySelector('[data-testid="connection-list-item__time_arrival"]')) === ${js(arrival)}
-      && nums[0] === ${js(trainNumber)};
+      && nums[0] === ${js(digits)};
   });
   if (matches.length <= $nth) return "notfound";
   var card = matches[$nth];
@@ -238,6 +240,28 @@ object VrSite {
 })()
 """.trimIndent()
     }
+
+    /** Answers the cookie question with "only necessary cookies". */
+    val NECESSARY_COOKIES_SCRIPT = """
+(function () {
+  $GUARD
+  var wanted = ${js(NECESSARY_COOKIES_TEXT)}.toLowerCase();
+  var roots = [document];
+  var all = document.querySelectorAll("*");
+  for (var i = 0; i < all.length && roots.length < 20; i++) { if (all[i].shadowRoot) roots.push(all[i].shadowRoot); }
+  for (var r = 0; r < roots.length; r++) {
+    var buttons = roots[r].querySelectorAll("button, [role=button]");
+    for (var j = 0; j < buttons.length; j++) {
+      var b = buttons[j];
+      if (b.getClientRects().length > 0 && (b.textContent || "").replace(/\s+/g, " ").trim().toLowerCase() === wanted) {
+        b.click();
+        return "clicked";
+      }
+    }
+  }
+  return "absent";
+})()
+""".trimIndent()
 
     /** Opens the coach map with "Change seat" unless it is already open. */
     val CLICK_CHANGE_SEAT_SCRIPT = """
@@ -309,7 +333,7 @@ object VrSite {
         data class Error(val message: String) : ParsedSearch
     }
 
-    private val NOT_ON_SALE_HINTS = Regex("(?i)not.?on.?sale|sales?.?(period|window|range)|out.?of.?range|too.?far|future|in the past|date")
+    private val NOT_ON_SALE_HINTS = Regex("(?i)not.?on.?sale|sales?.?(period|window|range)|out.?of.?range|too.?far")
 
     fun parseSearch(body: String): ParsedSearch {
         val root = runCatching { json.parseToJsonElement(body) }.getOrNull()
@@ -330,7 +354,8 @@ object VrSite {
             ?: return ParsedSearch.Error("Unexpected answer")
         val status = data.str("status").orEmpty()
         val options = (data["options"] as? JsonArray) ?: JsonArray(emptyList())
-        if (options.isEmpty() && status.contains("SALE", ignoreCase = true)) return ParsedSearch.NotOnSale
+        // No options: the date is not on sale yet.
+        if (options.isEmpty()) return ParsedSearch.NotOnSale
         val journeys = options.take(MAX_OPTIONS).mapNotNull { (it as? JsonObject)?.let(::parseOption) }
         return ParsedSearch.Options(journeys)
     }
@@ -348,7 +373,8 @@ object VrSite {
 
     private fun parseLeg(o: JsonObject): Leg? {
         val number = o.str("trainNumber")?.takeIf { TRAIN_NUMBER.matches(it) } ?: return null
-        val type = o.str("trainType")?.takeIf { TRAIN_TYPE.matches(it) } ?: return null
+        val type = if (o.str("busLineId") != null) "Bus"
+        else o.str("trainType")?.takeIf { TRAIN_TYPE.matches(it) } ?: return null
         val from = o.str("departureStation")?.takeIf { STATION_CODE.matches(it) } ?: return null
         val to = o.str("arrivalStation")?.takeIf { STATION_CODE.matches(it) } ?: return null
         val dep = o.time("departureTime") ?: return null
