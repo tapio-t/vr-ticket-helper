@@ -25,6 +25,9 @@ signing.properties
 *.dex
 output-metadata.json
 
+# Private project notes for Claude Code (kept on the owner's computer only)
+CLAUDE.local.md
+
 # Logs and OS files
 *.log
 .DS_Store
