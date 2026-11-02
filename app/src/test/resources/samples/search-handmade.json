@@ -1,0 +1,15 @@
+[{"result":{"data":{"status":"OK","options":[
+{"id":"opt-1","departureTime":"2026-11-10T06:05:00+02:00","arrivalTime":"2026-11-10T12:23:00+02:00","totalPrice":4890,
+ "legs":[{"trainNumber":"27","trainType":"IC","departureStation":"OL","arrivalStation":"HKI","departureTime":"2026-11-10T06:05:00+02:00","arrivalTime":"2026-11-10T12:23:00+02:00","type":"TRAIN"}],
+ "highestLegTrainFill":40,"availability":"AVAILABLE","passengers":[{"offers":[]}]},
+{"id":"opt-2","departureTime":"2026-11-10T08:30:00+02:00","arrivalTime":"2026-11-10T15:10:00+02:00","totalPrice":3590,
+ "legs":[{"trainNumber":"71","trainType":"S","departureStation":"OL","arrivalStation":"TPE","departureTime":"2026-11-10T08:30:00+02:00","arrivalTime":"2026-11-10T12:50:00+02:00","type":"TRAIN"},
+         {"trainNumber":"9033","trainType":"R","departureStation":"TPE","arrivalStation":"HKI","departureTime":"2026-11-10T13:05:00+02:00","arrivalTime":"2026-11-10T15:10:00+02:00","type":"TRAIN"}]},
+{"id":"opt-3","departureTime":"2026-11-10T21:40:00+02:00","arrivalTime":"2026-11-11T06:05:00+02:00","totalPrice":6990,
+ "legs":[{"trainNumber":"266","trainType":"PYO","departureStation":"OL","arrivalStation":"HKI","departureTime":"2026-11-10T21:40:00+02:00","arrivalTime":"2026-11-11T06:05:00+02:00","type":"TRAIN"}]},
+{"id":"bad-price","departureTime":"2026-11-10T09:00:00+02:00","arrivalTime":"2026-11-10T15:00:00+02:00","totalPrice":"free",
+ "legs":[{"trainNumber":"29","trainType":"IC","departureStation":"OL","arrivalStation":"HKI","departureTime":"2026-11-10T09:00:00+02:00","arrivalTime":"2026-11-10T15:00:00+02:00"}]},
+{"id":"bad-station","departureTime":"2026-11-10T10:00:00+02:00","arrivalTime":"2026-11-10T16:00:00+02:00","totalPrice":4000,
+ "legs":[{"trainNumber":"31","trainType":"IC","departureStation":"<script>","arrivalStation":"HKI","departureTime":"2026-11-10T10:00:00+02:00","arrivalTime":"2026-11-10T16:00:00+02:00"}]},
+{"id":"no-legs","departureTime":"2026-11-10T11:00:00+02:00","arrivalTime":"2026-11-10T17:00:00+02:00","totalPrice":4000,"legs":[]}
+]}}}]
